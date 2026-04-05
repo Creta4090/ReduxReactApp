@@ -1,17 +1,30 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { AgGridReact } from 'ag-grid-react'
 import { themeQuartz } from 'ag-grid-community'
 import { fetchPhotos } from '../features/photos/photosSlice'
+import { Modal, Button } from 'react-bootstrap'
 import './AgData.css'
 
 export default function AgData() {
   const dispatch = useDispatch()
   const { items, status, error } = useSelector((state) => state.photos)
+  const [showModal, setShowModal] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState(null)
 
   useEffect(() => {
     if (status === 'idle') dispatch(fetchPhotos())
   }, [status, dispatch])
+
+  const handleOpenModal = (photo) => {
+    setSelectedPhoto(photo)
+    setShowModal(true)
+  }
+  
+  const handleCloseModal = () => {
+    setShowModal(false)
+    setSelectedPhoto(null)
+  }
 
   if (status === 'loading') {
     return (
@@ -66,15 +79,13 @@ export default function AgData() {
       headerName: 'View',
       width: 80,
       cellRenderer: (params) => (
-        <a
-          href={params.value}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
           className="btn btn-sm btn-outline-primary"
+          onClick={() => handleOpenModal(params.data)}
           style={{ textDecoration: 'none' }}
         >
           Open
-        </a>
+        </button>
       ),
       cellStyle: { textAlign: 'center' },
     },
@@ -140,6 +151,30 @@ export default function AgData() {
           />
         </div>
       </div>
+
+      <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{selectedPhoto?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedPhoto && (
+            <div style={{ textAlign: 'center' }}>
+              <img
+                src={selectedPhoto.url}
+                alt={selectedPhoto.title}
+                style={{ maxWidth: '100%', maxHeight: '500px', borderRadius: '8px' }}
+              />
+              <p>  {selectedPhoto.title}</p>
+            
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }

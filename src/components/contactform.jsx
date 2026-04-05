@@ -1,27 +1,38 @@
-import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { addContact } from '../features/contact/contactSlice';
-import { Constants } from '../utils/constants';
+import { useState, useEffect } from 'react';
 
 const contactForm = () => {
-  const dispatch = useDispatch();
-  const contacts = useSelector((state) => state.contact?.contacts ?? []);
+  const [contacts, setContacts] = useState([]);
   const [formData, setFormData] = useState({ name: '', email: '', message: '', mobileNumber: '' });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const validationSchema = {
-    name: { required: true, message: Constants.ErrorMessages.nameRequired },
+    name: { required: true, message: 'Name is required.' },
     email: {
       required: true,
       pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-      message: Constants.ErrorMessages.emailInvalid
+      message: 'Enter a valid email address.'
     },
     mobileNumber: {
       required: true,
       pattern: /^\d{10}$/,
-      message: Constants.ErrorMessages.mobileInvalid
+      message: 'Enter a valid 10-digit mobile number.'
     },
-    message: { required: true, message: Constants.ErrorMessages.messageRequired }
+    message: { required: true, message: 'Message is required.' }
+  };
+
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  const fetchContacts = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/contacts');
+      const data = await response.json();
+      setContacts(data);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    }
   };
 
   const validate = (values) => {
@@ -46,15 +57,36 @@ const contactForm = () => {
     setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validate(formData)
+    const validationErrors = validate(formData);
     setErrors(validationErrors)
 
     if (Object.keys(validationErrors).length === 0) {
-      dispatch(addContact(formData))
-      setFormData({ name: '', email: '', message: '', mobileNumber: '' })
-      alert('Contact saved to Redux state!')
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:5000/api/contacts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
+        if (response.ok) {
+          const newContact = await response.json();
+          setContacts(prev => [...prev, newContact]);
+          setFormData({ name: '', email: '', message: '', mobileNumber: '' })
+          alert('Contact saved successfully!')
+        } else {
+          alert('Error saving contact');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error saving contact');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -134,8 +166,8 @@ const contactForm = () => {
               </div>
 
               <div className="col-12">
-                <button type="submit" className="btn btn-primary">
-                  Submit
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? 'Submitting...' : 'Submit'}
                 </button>
               </div>
             </div>
