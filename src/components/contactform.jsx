@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useGetContactsQuery, useAddContactMutation } from '../features/graphqlApi';
 
 const contactForm = () => {
-  const [contacts, setContacts] = useState([]);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ name: '', email: '', message: '', mobileNumber: '' });
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+  const { data: contactData, error: contactError, isLoading: contactsLoading } = useGetContactsQuery()
+  const [addContact, { isLoading: addingContact }] = useAddContactMutation()
 
   const validationSchema = {
     name: { required: true, message: 'Name is required.' },
@@ -19,20 +22,6 @@ const contactForm = () => {
       message: 'Enter a valid 10-digit mobile number.'
     },
     message: { required: true, message: 'Message is required.' }
-  };
-
-  useEffect(() => {
-    fetchContacts();
-  }, []);
-
-  const fetchContacts = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/contacts');
-      const data = await response.json();
-      setContacts(data);
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
-    }
   };
 
   const validate = (values) => {
@@ -63,32 +52,18 @@ const contactForm = () => {
     setErrors(validationErrors)
 
     if (Object.keys(validationErrors).length === 0) {
-      setLoading(true);
       try {
-        const response = await fetch('http://localhost:5000/api/contacts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
-
-        if (response.ok) {
-          const newContact = await response.json();
-          setContacts(prev => [...prev, newContact]);
-          setFormData({ name: '', email: '', message: '', mobileNumber: '' })
-          alert('Contact saved successfully!')
-        } else {
-          alert('Error saving contact');
-        }
+        await addContact(formData).unwrap()
+        setFormData({ name: '', email: '', message: '', mobileNumber: '' })
+        navigate('/thank-you');
       } catch (error) {
-        console.error('Error:', error);
-        alert('Error saving contact');
-      } finally {
-        setLoading(false);
+        console.error('Error:', error)
+        alert('Error saving contact')
       }
     }
   };
+
+  const contacts = contactData?.contacts ?? []
 
   return (
     <div className="container">
@@ -166,8 +141,8 @@ const contactForm = () => {
               </div>
 
               <div className="col-12">
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Submitting...' : 'Submit'}
+                <button type="submit" className="btn btn-primary" disabled={addingContact}>
+                  {addingContact ? 'Submitting...' : 'Submit'}
                 </button>
               </div>
             </div>
@@ -175,12 +150,16 @@ const contactForm = () => {
         </div>
         <div className="col-md-6">
             <h3 className="mt-4">Saved Contacts</h3>
-            {contacts.length === 0 ? (
+            {contactsLoading ? (
+              <p>Loading contacts...</p>
+            ) : contactError ? (
+              <p className="text-danger">Unable to load contacts.</p>
+            ) : contacts.length === 0 ? (
               <p>No saved contacts yet.</p>
             ) : (
-              <div className="list-group">
-                {contacts.map((contact, index) => (
-                   <div key={index} className="list-group-item">
+              <div className="list-group" style={ { maxHeight: '300px', overflowY: 'scroll' } }>
+                {contacts.map((contact) => (
+                   <div key={contact.id} className="list-group-item">
                     <strong>{contact.name}</strong>
                     <p className="mb-1">{contact.email}</p>
                     <p className="mb-1">{contact.mobileNumber}</p>

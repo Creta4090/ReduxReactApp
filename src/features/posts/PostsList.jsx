@@ -1,19 +1,14 @@
-import { useEffect, useRef } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useRef } from 'react'
 import { List } from 'react-window'
-import { fetchPosts } from './postsSlice'
+import { useGetPostsQuery } from '../graphqlApi'
 import './PostsList.css'
 
 export default function PostsList() {
-  const dispatch = useDispatch();
-  const { items, status, error } = useSelector((state) => state.posts);
-  const listRef = useRef(null);
+  const listRef = useRef(null)
+  const { data, error, isLoading } = useGetPostsQuery()
+  const items = data?.posts ?? []
 
-  useEffect(() => {
-    if (status === 'idle') dispatch(fetchPosts())
-  }, [status, dispatch])
-
-  if (status === 'loading') {
+  if (isLoading) {
     return (
       <div className="posts-container">
         <div className="alert alert-info" role="alert">
@@ -23,12 +18,12 @@ export default function PostsList() {
       </div>
     )
   }
-  
-  if (status === 'failed') {
+
+  if (error) {
     return (
       <div className="posts-container">
         <div className="alert alert-danger" role="alert">
-          <strong>Error!</strong> {error}
+          <strong>Error!</strong> Unable to load posts.
         </div>
       </div>
     )

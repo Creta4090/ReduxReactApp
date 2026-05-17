@@ -9,6 +9,7 @@ import Login from './components/Login';
 import Home from './lowComponent/home';
 import ContactForm from './components/contactform';
 import ProtectedRoute from './components/ProtectedRoute';
+import ThankYou from './components/thankYou';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/photos" element={<ProtectedRoute><AgData /></ProtectedRoute>} />
             <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
             <Route path="/contact" element={<ProtectedRoute><ContactForm /></ProtectedRoute>} />
+             <Route path="/thank-you" element={<ProtectedRoute><ThankYou /></ProtectedRoute>} />
           </Routes>
         </main>
         <Footer />
